@@ -361,6 +361,48 @@ combined_map <- combined_map + plot_layout(ncol = 2, nrow=3) # Adjust layout as 
 # Display the combined map
 print(combined_map)
 ```
+```{r bar chart}
+# Load necessary libraries
+library(tidyverse)
+
+# Assuming your data is loaded into a dataframe named 'police_stops_data'
+
+# Read the CSV file (adjust the path as needed)
+police_stops_data <- read.csv('police_stops_data.csv')
+
+# Creating a new variable for false stop and searches
+# A false stop and search is one where the outcome is not linked to the object of search
+police_stops_data$false_stop_search <- !police_stops_data$outcome_linked_to_object_of_search
+
+# Calculate the proportion of false stop and searches for each ethnicity
+ethnicity_summary <- police_stops_data %>%
+  group_by(officer_defined_ethnicity) %>%
+  summarise(
+    total_searches = n(),
+    false_searches = sum(false_stop_search),
+    proportion_false_searches = false_searches / total_searches
+  )
+
+# Plotting the proportion of false stop and searches by ethnicity
+ggplot(ethnicity_summary, aes(x = officer_defined_ethnicity, y = proportion_false_searches, fill = officer_defined_ethnicity)) +
+  geom_bar(stat = 'identity') +
+  scale_fill_brewer(palette = "Set2") +
+  geom_text(aes(label = round(proportion_false_searches, 3)), vjust = -0.5) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    legend.position = "none"
+  ) +
+  labs(
+    title = 'Proportion of False Stop and Searches by Ethnicity',
+    subtitle = 'Comparison across different ethnic groups',
+    x = 'Officer-Defined Ethnicity',
+    y = 'Proportion of False Searches'
+  )
+
+```
 
 
 ## Appendix: All code in this assignment
