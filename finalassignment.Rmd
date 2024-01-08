@@ -1,0 +1,371 @@
+---
+title: "Assignment4"
+output: html_document
+date: "2023-12-11"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+### Introduction
+
+```{r getting data from the uk police api}
+library(httr)
+library(jsonlite)
+library(lubridate)
+
+# forces <- c("avon-and-somerset", "bedfordshire", "btp", "cambridgeshire", "cheshire", 
+#            "city-of-london", "cleveland", "cumbria", "derbyshire", "devon-and-cornwall", 
+ #           "dorset", "durham", "dyfed-powys", "essex", "gloucestershire", "gmp", "gwent", 
+  #          "hampshire", "hertfordshire", "humberside", "kent", "lancashire", "leicestershire", 
+   #         "lincolnshire", "merseyside", "metropolitan", "norfolk", "north-wales", 
+    #        "north-yorkshire", "northamptonshire", "northumbria", "nottinghamshire", "psni", 
+     #       "south-wales", "south-yorkshire", "staffordshire", "suffolk", "surrey", 
+     #       "sussex", "thames-valley", "warwickshire", "west-mercia", "west-midlands", 
+      #      "west-yorkshire", "wiltshire")
+
+# date_seq <- c("2021-01", "2021-02", "2021-03", "2021-04", "2021-05",
+#                "2021-06", "2021-07", "2021-08", "2021-09", "2021-10", "2021-11", "2021-12")
+
+
+# Define the columns to keep
+# columns_to_keep <- c("age_range", "gender", "datetime", "officer_defined_ethnicity", 
+               #      "type", "outcome_linked_to_object_of_search", "location.latitude", 
+               #      "location.longitude", "location.street.id", "location.street.name", "force")
+
+
+#all_data <- list()
+
+#for (force in forces) {
+  #  force_data <- list()
+
+    #for (date in date_seq) {
+        #url <- paste0("https://data.police.uk/api/stops-force?force=", force, "&date=", date)
+        #response <- GET(url)
+       # if (status_code(response) == 200) {
+     #       data <- fromJSON(content(response, "text", encoding = "UTF-8"), flatten = TRUE)
+       #     if (is.data.frame(data) && nrow(data) > 0) {
+      #          data$force <- force  # Add the force name here
+
+                # Standardize columns
+        #        for (col in columns_to_keep) {
+         #           if (!col %in% names(data)) {
+          #              data[[col]] <- NA  # Add missing columns as NA
+           #         }
+            #    }
+             #   data <- data[, columns_to_keep]  # Keep only the desired columns
+
+              #  force_data[[date]] <- data
+          #  } else {
+           #     warning("No data or incorrect format for ", force, " for date ", date)
+            #}
+      #  } else {
+     #       warning("Failed to retrieve data for ", force, " for date ", date)
+      #  }
+  #  }
+
+    # Combine data frames for this force
+   # if (length(force_data) > 0) {
+#        all_data[[force]] <- do.call(rbind, force_data)
+ #   }
+#}
+
+# Combine all the data into one data frame
+#combined_data <- do.call(rbind, all_data)
+
+# Handle Missing Values
+#combined_data <- na.omit(combined_data)
+
+# Convert 'datetime' to Date format
+#combined_data$datetime <- as.Date(combined_data$datetime, format="%Y-%m-%dT%H:%M:%S") 
+
+#head(combined_data)
+
+# Save the combined data to a CSV file
+#write.csv(combined_data, "police_stops_data.csv", row.names = FALSE)
+
+# Read the data from the saved file
+combined_data <- read.csv("police_stops_data.csv")
+
+```
+
+```{r percentage of non-white}
+# Load necessary libraries
+library(sf)
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(viridis)
+
+
+# Read the shapefile
+lad_shapefile <- st_read("Local_Authority_Districts_(May_2021)_UK_BGC/LAD_MAY_2021_UK_BGC.shp")
+
+# Read the CSV data
+data <- read_csv2("ethnicity-composition-across-uk.csv")
+
+
+# sum up all non-white ethnicity percentages.
+library(dplyr)
+
+
+clean_data <- data %>% 
+  filter(`Asian, Asian British or Asian Welsh: Bangladesh` != "-", 
+                           `Asian, Asian British or Asian Welsh: Chinese` != "-",
+                           `Asian, Asian British or Asian Welsh: Indian` != "-",
+                           `Asian, Asian British or Asian Welsh: Pakistani`!= "-",
+                           `Asian, Asian British or Asian Welsh: Other Asian` != "-",
+                           `Black, Black British, Black Welsh, Caribbean or African: African` != "-",
+                           `Black, Black British, Black Welsh, Caribbean or African: Caribbean` != "-",
+                           `Black, Black British, Black Welsh, Caribbean or African: Other Black` != "-", 
+                           `Mixed or Multiple ethnic groups: White and Asian` != "-", 
+                           `Mixed or Multiple ethnic groups: White and Black African` != "-", 
+                           `Mixed or Multiple ethnic groups: White and Black Caribbean` != "-",
+                           `Mixed or Multiple ethnic groups: Other Mixed or Multiple ethnic groups` != "-",
+                           `Other ethnic group: Arab` != "-",
+                           `Other ethnic group: Any other ethnic group` != "-")
+
+data <- clean_data %>%
+  mutate(
+    `Asian, Asian British or Asian Welsh: Bangladesh` = as.numeric(gsub(",", ".", `Asian, Asian British or Asian Welsh: Bangladesh`)),
+    `Asian, Asian British or Asian Welsh: Chinese` = as.numeric(gsub(",", ".", `Asian, Asian British or Asian Welsh: Chinese`)),
+    `Asian, Asian British or Asian Welsh: Indian` = as.numeric(gsub(",", ".", `Asian, Asian British or Asian Welsh: Indian`)),
+    `Asian, Asian British or Asian Welsh: Pakistani` = as.numeric(gsub(",", ".", `Asian, Asian British or Asian Welsh: Pakistani`)),
+    `Asian, Asian British or Asian Welsh: Other Asian` = as.numeric(gsub(",", ".", `Asian, Asian British or Asian Welsh: Other Asian`)),
+    `Black, Black British, Black Welsh, Caribbean or African: African` = as.numeric(gsub(",", ".", `Black, Black British, Black Welsh, Caribbean or African: African`)),
+    `Black, Black British, Black Welsh, Caribbean or African: Caribbean` = as.numeric(gsub(",", ".", `Black, Black British, Black Welsh, Caribbean or African: Caribbean`)),
+    `Black, Black British, Black Welsh, Caribbean or African: Other Black` = as.numeric(gsub(",", ".", `Black, Black British, Black Welsh, Caribbean or African: Other Black`)),
+    `Mixed or Multiple ethnic groups: White and Asian` = as.numeric(gsub(",", ".", `Mixed or Multiple ethnic groups: White and Asian`)),
+    `Mixed or Multiple ethnic groups: White and Black African` = as.numeric(gsub(",", ".", `Mixed or Multiple ethnic groups: White and Black African`)),
+    `Mixed or Multiple ethnic groups: White and Black Caribbean` = as.numeric(gsub(",", ".", `Mixed or Multiple ethnic groups: White and Black Caribbean`)),
+    `Mixed or Multiple ethnic groups: Other Mixed or Multiple ethnic groups` = as.numeric(gsub(",", ".", `Mixed or Multiple ethnic groups: Other Mixed or Multiple ethnic groups`)),
+    `Other ethnic group: Arab` = as.numeric(gsub(",", ".", `Other ethnic group: Arab`)),
+    `Other ethnic group: Any other ethnic group` = as.numeric(gsub(",", ".", `Other ethnic group: Any other ethnic group`))
+  )
+
+
+data <- data %>%
+  rowwise() %>%
+  mutate(PercentNonWhite = `Asian, Asian British or Asian Welsh: Bangladesh` +
+                           `Asian, Asian British or Asian Welsh: Chinese` +
+                           `Asian, Asian British or Asian Welsh: Indian` +
+                           `Asian, Asian British or Asian Welsh: Pakistani` +
+                           `Asian, Asian British or Asian Welsh: Other Asian` +
+                           `Black, Black British, Black Welsh, Caribbean or African: African` +
+                           `Black, Black British, Black Welsh, Caribbean or African: Caribbean` +
+                           `Black, Black British, Black Welsh, Caribbean or African: Other Black` +
+                           `Mixed or Multiple ethnic groups: White and Asian` +
+                           `Mixed or Multiple ethnic groups: White and Black African` +
+                           `Mixed or Multiple ethnic groups: White and Black Caribbean` +
+                           `Mixed or Multiple ethnic groups: Other Mixed or Multiple ethnic groups` +
+                           `Other ethnic group: Arab` +
+                           `Other ethnic group: Any other ethnic group`) %>%
+  ungroup()
+
+
+
+
+# Merge the shapefile and CSV data
+map_data <- left_join(lad_shapefile, data, by = c("LAD21CD" = "Area code"))
+
+# Assuming your merged shapefile and data is in 'uk_data'
+map1 <- ggplot(data = map_data) +
+  geom_sf(aes(fill = PercentNonWhite), color = NA) +  # No border color
+  scale_fill_viridis_c(
+    option = "C",  # Viridis color option
+    direction = 1,  # Sets the direction of the color scale
+    name = "Percent Non-White",  # Legend title
+    labels = scales::percent_format(scale = 1),  # Format labels as percentages
+    na.value = "grey"  # Color for NA values
+  ) +
+  labs(
+    title = "Percentage of Non-White Ethnicities",
+    caption = "Source: data.gov.uk"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "right",  # Adjust legend position
+    plot.title = element_text(size = 14, face = "bold"),  # Title style
+    plot.subtitle = element_text(size = 12)  # Subtitle style
+  )
+
+```
+
+
+```{r stop-and-search incidents distribution}
+library(sf)
+library(dplyr)
+library(ggplot2)
+
+# Assuming the shapefiles are in the specified directory
+uk_shape <- st_read('ne_10m_admin_0_countries/ne_10m_admin_0_countries.shp')
+
+# Filter for the United Kingdom
+uk <- uk_shape %>% 
+  filter(ADMIN == "United Kingdom")
+
+combined_data$location.latitude <- as.numeric(as.character(combined_data$location.latitude))
+combined_data$location.longitude <- as.numeric(as.character(combined_data$location.longitude))
+
+# Create a simple feature object from your data
+stops_sf <- st_as_sf(combined_data, coords = c("location.longitude", "location.latitude"), 
+                     crs = st_crs(uk), agr = "constant")
+
+
+map2 <- ggplot() +
+  geom_sf(data = uk) +  # Plot the UK map
+  geom_sf(data = stops_sf, color = 'red', size = 0.6, alpha = 0.7) +  # Plot the stop and search data
+  theme_minimal() +
+  labs(title = "Distribution of Stop and Searches",
+    caption = "Source: data.police.uk"
+  ) +
+  theme(
+    plot.title = element_text(size = 14, face = "bold") # Title style
+  )
+
+```
+
+```{r map together in a single visualisation}
+library(ggplot2)
+
+# Modify map1 to remove axes
+map1 <- map1 + 
+  coord_sf() +  # Add coordinate system for spatial data+ 
+  theme(
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(hjust = 0.5, size = 10),  # Adjust title size
+    axis.title = element_blank(),  # Remove axis titles
+    axis.text = element_blank(),   # Remove axis text
+    axis.ticks = element_blank(),   # Remove axis ticks
+    legend.position = "left", # Move legend to bottom
+    legend.title = element_text(size = 7),  # Adjust the size of the legend title
+    legend.text = element_text(size = 7),    # Adjust the size of the legend text
+    legend.key.size = unit(0.75, "lines") # Adjust the size of the legend keys
+  )
+
+
+# Modify map2 to remove axes
+map2 <- map2 + 
+  coord_sf() +  # Add coordinate system for spatial data+ 
+  theme(
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(hjust = 0.5, size = 10),  # Adjust title size
+    axis.title = element_blank(),  # Remove axis titles
+    axis.text = element_blank(),   # Remove axis text
+    axis.ticks = element_blank()   # Remove axis ticks
+  )
+
+# Adjust margins of the maps
+map1 <- map1 + theme(plot.margin = margin(1, 1, 1, 1, "cm"))
+map2 <- map2 + theme(plot.margin = margin(1, 1, 1, 1, "cm"))
+
+# Combine the plots with patchwork
+library(patchwork)
+combined_map_layout <- map1 + map2 +
+  plot_layout(ncol = 2)
+
+# Print the combined plot
+print(combined_map_layout)
+```
+
+
+
+```{r outcome map}
+library(sf)
+
+# Assuming you have a shapefile for the geographic areas
+geo_shape <- st_read('Police_Force_Areas/PFA_DEC_2021_EW_BUC.shp')
+
+mapping_table <- data.frame(
+  force = c("avon-and-somerset", "bedfordshire", "btp", "cambridgeshire", "cheshire", "city-of-london", "cleveland", "cumbria", "derbyshire", "dorset", "durham", "gloucestershire", "	
+hampshire", "hertfordshire", "kent", "leicestershire", "lincolnshire", "merseyside", "	
+norfolk", "north-wales",  "northamptonshire", "northumbria", "staffordshire", "suffolk", "surrey", "sussex", "thames-valley", "west-mercia", "west-midlands", "west-yorkshire", "wiltshire" ),
+  force_shapefile = c("Avon and Somerset", "Bedfordshire", "Metropolitan Police",  "Cambridgeshire", "Cheshire", "London, City of", "Cleveland", "Cumbria", "Derbyshire", "Dorset", "Durham", "Gloucestershire", "	
+Hampshire", "Hertfordshire", "Kent", "Leicestershire", "Lincolnshire", "Merseyside",  "	
+Norfolk", "North Wales", "Northamptonshire", "Northumbria", "Staffordshire", "Suffolk", "Surrey",  "Sussex", "Thames Valley", "West Mercia", "West Midlands", "West Yorkshire", "Wiltshire")
+)
+
+# Join the data with the mapping table and avoid overwriting the original 'force' column
+combined_data <- combined_data %>%
+  left_join(mapping_table, by = "force") %>%
+  mutate(force_mapped = force_shapefile)
+
+# Calculate ratios
+ratio_data <- combined_data %>%
+  group_by(force_mapped, officer_defined_ethnicity) %>%
+  summarise(no_outcome_count = sum(outcome_linked_to_object_of_search == FALSE),
+            total_count = n(),
+            ratio = no_outcome_count / total_count, .groups = 'drop')
+
+ratio_data <- combined_data %>%
+  group_by(force_mapped, officer_defined_ethnicity) %>%
+  summarise(no_outcome_count = sum(outcome_linked_to_object_of_search == FALSE),
+            total_count = n(),
+            ratio = no_outcome_count / total_count, .groups = 'drop')
+
+
+ratio_data1 <- combined_data %>%
+  group_by(officer_defined_ethnicity) %>%
+  summarise(no_outcome_count = sum(outcome_linked_to_object_of_search == FALSE),
+            total_count = n(),
+            ratio = no_outcome_count / total_count, .groups = 'drop')
+
+library(ggplot2)
+
+# Merge the ratio data with the geographic shape data
+merged_data <- merge(geo_shape, ratio_data, by.x = "PFA21NM", by.y = "force_mapped")
+merged_data <- st_transform(merged_data, 27700)
+
+
+# Create the choropleth map
+map <- ggplot(data = merged_data) +
+  geom_sf(aes(fill = ratio), color = NA) + # 'color = NA' removes borders inside regions
+  scale_fill_viridis_c(option = "C", direction = 1, begin = 0, end = 1, name = "No Outcome/Search Ratio") +
+  labs(title = "Ratio of No Outcome Stop-and-Search by Ethnicity") +
+  theme_minimal()
+
+# Print the map
+print(map)
+
+library(dplyr)
+library(patchwork)
+
+# Assuming merged_data is your spatial data merged with ratio calculations
+
+# Function to create a map for a given ethnicity
+create_map <- function(ethnicity, data) {
+  filtered_data <- data %>% filter(officer_defined_ethnicity == ethnicity)
+  
+  ggplot(data = filtered_data) +
+    geom_sf(aes(fill = ratio)) +
+    scale_fill_viridis_c(name = "Ratio", option = "C") +
+    labs(title = paste("Ethnicity:", ethnicity)) +
+    theme_minimal()
+}
+
+# Create maps for each ethnicity
+map_asian <- create_map("Asian", merged_data)
+map_black <- create_map("Black", merged_data)
+map_mixed <- create_map("Mixed", merged_data)
+map_white <- create_map("White", merged_data)
+map_other <- create_map("Other", merged_data)
+
+
+# Combine maps into a grid
+combined_map <- map_asian + map_black + map_mixed + map_white + map_other # add other maps
+combined_map <- combined_map + plot_layout(ncol = 2, nrow=3) # Adjust layout as needed
+
+# Display the combined map
+print(combined_map)
+```
+
+
+## Appendix: All code in this assignment
+
+```{r ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE} 
+# this chunk generates the complete code appendix. 
+# eval=FALSE tells R not to run (``evaluate'') the code here (it was already run before).
+```
