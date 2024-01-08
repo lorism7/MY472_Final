@@ -272,95 +272,6 @@ print(combined_map_layout)
 ```
 
 
-
-```{r outcome map}
-library(sf)
-
-# Assuming you have a shapefile for the geographic areas
-geo_shape <- st_read('Police_Force_Areas/PFA_DEC_2021_EW_BUC.shp')
-
-mapping_table <- data.frame(
-  force = c("avon-and-somerset", "bedfordshire", "btp", "cambridgeshire", "cheshire", "city-of-london", "cleveland", "cumbria", "derbyshire", "dorset", "durham", "gloucestershire", "	
-hampshire", "hertfordshire", "kent", "leicestershire", "lincolnshire", "merseyside", "	
-norfolk", "north-wales",  "northamptonshire", "northumbria", "staffordshire", "suffolk", "surrey", "sussex", "thames-valley", "west-mercia", "west-midlands", "west-yorkshire", "wiltshire" ),
-  force_shapefile = c("Avon and Somerset", "Bedfordshire", "Metropolitan Police",  "Cambridgeshire", "Cheshire", "London, City of", "Cleveland", "Cumbria", "Derbyshire", "Dorset", "Durham", "Gloucestershire", "	
-Hampshire", "Hertfordshire", "Kent", "Leicestershire", "Lincolnshire", "Merseyside",  "	
-Norfolk", "North Wales", "Northamptonshire", "Northumbria", "Staffordshire", "Suffolk", "Surrey",  "Sussex", "Thames Valley", "West Mercia", "West Midlands", "West Yorkshire", "Wiltshire")
-)
-
-# Join the data with the mapping table and avoid overwriting the original 'force' column
-combined_data <- combined_data %>%
-  left_join(mapping_table, by = "force") %>%
-  mutate(force_mapped = force_shapefile)
-
-# Calculate ratios
-ratio_data <- combined_data %>%
-  group_by(force_mapped, officer_defined_ethnicity) %>%
-  summarise(no_outcome_count = sum(outcome_linked_to_object_of_search == FALSE),
-            total_count = n(),
-            ratio = no_outcome_count / total_count, .groups = 'drop')
-
-ratio_data <- combined_data %>%
-  group_by(force_mapped, officer_defined_ethnicity) %>%
-  summarise(no_outcome_count = sum(outcome_linked_to_object_of_search == FALSE),
-            total_count = n(),
-            ratio = no_outcome_count / total_count, .groups = 'drop')
-
-
-ratio_data1 <- combined_data %>%
-  group_by(officer_defined_ethnicity) %>%
-  summarise(no_outcome_count = sum(outcome_linked_to_object_of_search == FALSE),
-            total_count = n(),
-            ratio = no_outcome_count / total_count, .groups = 'drop')
-
-library(ggplot2)
-
-# Merge the ratio data with the geographic shape data
-merged_data <- merge(geo_shape, ratio_data, by.x = "PFA21NM", by.y = "force_mapped")
-merged_data <- st_transform(merged_data, 27700)
-
-
-# Create the choropleth map
-map <- ggplot(data = merged_data) +
-  geom_sf(aes(fill = ratio), color = NA) + # 'color = NA' removes borders inside regions
-  scale_fill_viridis_c(option = "C", direction = 1, begin = 0, end = 1, name = "No Outcome/Search Ratio") +
-  labs(title = "Ratio of No Outcome Stop-and-Search by Ethnicity") +
-  theme_minimal()
-
-# Print the map
-print(map)
-
-library(dplyr)
-library(patchwork)
-
-# Assuming merged_data is your spatial data merged with ratio calculations
-
-# Function to create a map for a given ethnicity
-create_map <- function(ethnicity, data) {
-  filtered_data <- data %>% filter(officer_defined_ethnicity == ethnicity)
-  
-  ggplot(data = filtered_data) +
-    geom_sf(aes(fill = ratio)) +
-    scale_fill_viridis_c(name = "Ratio", option = "C") +
-    labs(title = paste("Ethnicity:", ethnicity)) +
-    theme_minimal()
-}
-
-# Create maps for each ethnicity
-map_asian <- create_map("Asian", merged_data)
-map_black <- create_map("Black", merged_data)
-map_mixed <- create_map("Mixed", merged_data)
-map_white <- create_map("White", merged_data)
-map_other <- create_map("Other", merged_data)
-
-
-# Combine maps into a grid
-combined_map <- map_asian + map_black + map_mixed + map_white + map_other # add other maps
-combined_map <- combined_map + plot_layout(ncol = 2, nrow=3) # Adjust layout as needed
-
-# Display the combined map
-print(combined_map)
-```
 ```{r bar chart}
 # Load necessary libraries
 library(tidyverse)
@@ -404,6 +315,100 @@ ggplot(ethnicity_summary, aes(x = officer_defined_ethnicity, y = proportion_fals
 
 ```
 
+```{r adding police force to the analysis}
+# Load necessary libraries
+library(tidyverse)
+
+# Assuming your data is loaded into a dataframe named 'police_stops_data'
+
+# Read the CSV file (adjust the path as needed)
+police_stops_data <- read.csv('police_stops_data.csv')
+
+# Creating a new variable for false stop and searches
+police_stops_data$false_stop_search <- !police_stops_data$outcome_linked_to_object_of_search
+
+# Group by region (force) and ethnicity, and calculate proportions
+regional_ethnicity_summary <- police_stops_data %>%
+  group_by(force, officer_defined_ethnicity) %>%
+  summarise(
+    total_searches = n(),
+    false_searches = sum(false_stop_search),
+    proportion_false_searches = false_searches / total_searches
+  ) %>%
+  ungroup()
+
+ggplot(regional_ethnicity_summary, aes(x = force, y = proportion_false_searches, color = officer_defined_ethnicity, group = officer_defined_ethnicity)) +
+  geom_line() +
+  geom_point() +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(
+    title = 'Trends in False Stop and Searches by Ethnicity Across Regions',
+    subtitle = 'Each line represents an ethnicity',
+    x = 'Region (Police Force)',
+    y = 'Proportion of False Searches',
+    color = 'Ethnicity'
+  )
+
+```
+
+```{r regression}
+# Load necessary libraries
+library(dplyr)
+
+# Read your data into a dataframe
+# Read the CSV file into a dataframe
+data <- read.csv('police_stops_data.csv')
+
+
+# Define false stop and searches
+# Assuming a false stop and search is when 'outcome_linked_to_object_of_search' is FALSE
+data$false_stop_search <- !data$outcome_linked_to_object_of_search
+
+
+# Convert categorical variables to factors
+data$force <- as.factor(data$force)
+data$officer_defined_ethnicity <- as.factor(data$officer_defined_ethnicity)
+data$false_stop_search <- as.factor(data$outcome_linked_to_object_of_search)
+
+# Fit a logistic regression model
+logistic_model <- glm(false_stop_search ~ force + officer_defined_ethnicity, data = data, family = 'binomial')
+
+library(broom)
+
+# Assuming your logistic model is named logistic_model
+tidied_model <- tidy(logistic_model)
+
+# Selecting important columns
+important_results <- tidied_model %>%
+  select(term, estimate, std.error, statistic, p.value)
+
+# Viewing the table
+print(important_results)
+
+
+```
+The results from your logistic regression model provide a lot of information. Here's how to interpret these results:
+
+Coefficients (Estimate):
+Each coefficient in the model represents the log odds of the outcome (a false stop and search) for that category, relative to the reference category, while holding other variables constant.
+For example, the coefficient for forcebtp is -2.02768. This suggests that, compared to the reference category (which is the first category of force not shown in the summary), the log odds of a false stop and search are lower in the 'btp' police force.
+Statistical Significance (Pr(>|z|)):
+The p-values indicate whether the coefficients are statistically significantly different from 0.
+A small p-value (typically less than 0.05) suggests that the effect of that predictor on the outcome is significant.
+For example, forcebtp has a p-value of less than 2e-16, which is very small, indicating that it is a significant predictor of the outcome.
+Overall Model Fit:
+The 'Null deviance' and 'Residual deviance' give you a sense of how well the model fits the data. A large drop in deviance indicates a good fit.
+The AIC (Akaike Information Criterion) is a measure of the quality of the model; lower values indicate a better model fit.
+Interpretation of Key Results:
+Many of the force categories have significant coefficients, indicating that there are regional variations in the likelihood of false stop and searches.
+The coefficient for officer_defined_ethnicityBlack is significant and negative, suggesting that being classified as Black decreases the log odds of a false stop and search compared to the baseline ethnicity (likely 'Asian' in this case, as it's the first alphabetically).
+Some coefficients, such as forceleicestershire and forcenorthumbria, have extremely large estimates and should be interpreted with caution. This could be due to very low or high proportions of false searches in these categories, or it could be an indication of data issues or model overfitting.
+Are These Results Meaningful?
+The results are meaningful as they indicate significant differences in the likelihood of false stop and searches based on region and ethnicity.
+However, interpretation should be cautious. Logistic regression coefficients can be influenced by unmeasured confounding variables and the choice of reference categories.
+The model indicates that both region (force) and ethnicity significantly affect the likelihood of a false stop and search, but it's important to consider the broader context, including potential biases in policing practices and demographic differences across regions.
+To further understand the implications of these findings, you might want to delve deeper into specific significant predictors or consult with a domain expert.
 
 ## Appendix: All code in this assignment
 
