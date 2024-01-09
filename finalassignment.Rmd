@@ -18,6 +18,23 @@ This analysis seeks to identify potential biases in the UK's police stop and sea
 
 #### UK Police Data API
 
+For the study's primary data source, we meticulously gathered stop and search data from the UK Police API, tailored by individual police forces and confined to the year 2021. This approach was chosen for its precision in capturing localized policing patterns and ensuring a comprehensive view across different regions. Each police force's data was collected monthly, ensuring granularity in the time sequence and allowing for the detection of temporal trends.
+
+The year 2021 was specifically selected to balance the depth of data with practicality. It offers a recent snapshot, reflecting contemporary policing practices and societal contexts, making our analysis both relevant and timely.
+
+During data processing, we ensured consistency and uniformity in the datasets. This involved standardizing the data structure across different records, removing missing data, and merging the datasets to form a single, cohesive database. The data included key variables such as age, gender, officer-defined ethnicity, and geographic coordinates, providing a rich basis for our analysis.
+
+Another critical aspect of our analysis involved the creation of a new variable to identify false stop and searches. This was defined as instances where the outcome of a stop and search was not linked to the object of the search (FALSE). By calculating the proportion of false stop and searches for each ethnicity, we could gain insights into potential biases in policing practices.
+
+Due to the extensive size of the data and to optimize the run-time of our analysis, we saved the processed data as a CSV file. This step not only streamlined our workflow but also ensured that our analysis was reproducible and efficient. For spatial analysis,  we utilized the "ne_10m_admin_0_countries" shapefile as our geographic data source.
+
+#### Additional Source
+
+To handle and clean the demographic data obtained from the UK Office for National Statistics, a methodical approach was applied. After being filtered and transformed, the cleaned data was  enriched by calculating the total percentage of non-white ethnic groups in each area. This was achieved by summing the percentages of all non-white ethnic groups row-wise, providing a comprehensive measure of ethnic diversity across different regions.
+
+Finally, this processed demographic data was merged with a shapefile, enabling spatial analysis and visualization of ethnic compositions in correlation with police stop and search data. The shapefile, titled "Local Authority Districts (May 2021) UK BGC and containing geographic boundaries of UK local authority districts as of May 2021, offered a precise and contextually relevant geographical framework for the study.
+
+
 
 ```{r getting data from the uk police api}
 library(httr)
@@ -234,7 +251,9 @@ map2 <- ggplot() +
   )
 
 ```
+### Analysis
 
+##### Figure 1: Ethnic Demographics and Police Stop-and-Searches in the UK
 ```{r map together in a single visualisation}
 library(ggplot2)
 
@@ -280,7 +299,10 @@ combined_map_layout <- map1 + map2 +
 print(combined_map_layout)
 ```
 
+Figure 1 contrasts two maps of the UK, one depicting the density of non-white ethnic groups with London as the focal point, and the other indicating stop-and-search incidents, similarly clustered around London. This visual pairing hints at a potential link between ethnic composition and the frequency of police interventions, with both phenomena most pronounced in the capital. However, also taking into account the missing data (grey areas), we would need deeper examination to discern any underlying causality, as the maps alone merely suggest a spatial alignment without establishing a direct connection.
 
+
+##### Figure 2
 ```{r bar chart}
 # Load necessary libraries
 library(tidyverse)
@@ -324,6 +346,10 @@ ggplot(ethnicity_summary, aes(x = officer_defined_ethnicity, y = proportion_fals
 
 ```
 
+Figure 2 presents a clear visual representation of the proportion of false stops and searches across different ethnic groups, showing a marked variance that could indicate an ethnic bias in law enforcement practices. Notably, individuals identified as Black and those grouped as 'Other' encounter the highest rates of false stops and searches, significantly more than their Asian counterparts, who experience the lowest. This disparity points toward a troubling trend that may reflect prejudiced assumptions rooted in perceived ethnicity, calling for a critical evaluation of policing tactics to address potential biases.
+
+
+##### Figure 3
 ```{r adding police force to the analysis}
 # Load necessary libraries
 library(tidyverse)
@@ -361,6 +387,10 @@ ggplot(regional_ethnicity_summary, aes(x = force, y = proportion_false_searches,
 
 ```
 
+Figure 3 depicts the inconsistency of false stop and searches across regions for different ethnic groups, suggesting that the application of stop and search is not uniform. The fluctuation might reflect regional policing strategies, community relations, or social-economic factors influencing police interactions. The peaks and troughs for each ethnic line warrant a closer examination of local policing policies to understand the underlying causes of these disparities.
+
+
+##### Results of the Regression Analysis (rows 1-6)
 ```{r regression}
 # Load necessary libraries
 library(dplyr)
@@ -393,34 +423,12 @@ important_results <- tidied_model %>%
   select(term, estimate, std.error, statistic, p.value)
 
 # Viewing the table
-print(important_results)
+head(important_results)
 
 
 ```
-The results from your logistic regression model provide a lot of information. Here's how to interpret these results:
 
-Coefficients (Estimate):
-Each coefficient in the model represents the log odds of the outcome (a false stop and search) for that category, relative to the reference category, while holding other variables constant.
-For example, the coefficient for forcebtp is -2.02768. This suggests that, compared to the reference category (which is the first category of force not shown in the summary), the log odds of a false stop and search are lower in the 'btp' police force.
-Statistical Significance (Pr(>|z|)):
-The p-values indicate whether the coefficients are statistically significantly different from 0.
-A small p-value (typically less than 0.05) suggests that the effect of that predictor on the outcome is significant.
-For example, forcebtp has a p-value of less than 2e-16, which is very small, indicating that it is a significant predictor of the outcome.
-Overall Model Fit:
-The 'Null deviance' and 'Residual deviance' give you a sense of how well the model fits the data. A large drop in deviance indicates a good fit.
-The AIC (Akaike Information Criterion) is a measure of the quality of the model; lower values indicate a better model fit.
-Interpretation of Key Results:
-Many of the force categories have significant coefficients, indicating that there are regional variations in the likelihood of false stop and searches.
-The coefficient for officer_defined_ethnicityBlack is significant and negative, suggesting that being classified as Black decreases the log odds of a false stop and search compared to the baseline ethnicity (likely 'Asian' in this case, as it's the first alphabetically).
-Some coefficients, such as forceleicestershire and forcenorthumbria, have extremely large estimates and should be interpreted with caution. This could be due to very low or high proportions of false searches in these categories, or it could be an indication of data issues or model overfitting.
-Are These Results Meaningful?
-The results are meaningful as they indicate significant differences in the likelihood of false stop and searches based on region and ethnicity.
-However, interpretation should be cautious. Logistic regression coefficients can be influenced by unmeasured confounding variables and the choice of reference categories.
-The model indicates that both region (force) and ethnicity significantly affect the likelihood of a false stop and search, but it's important to consider the broader context, including potential biases in policing practices and demographic differences across regions.
-To further understand the implications of these findings, you might want to delve deeper into specific significant predictors or consult with a domain expert.
-
-
-
+The regression analysis enhances the narrative painted by Figure 3, quantitatively affirming that disparities in stop and search practices are not merely random fluctuations but are instead significantly influenced by regional policing policies and potentially by the intersectional dynamics of ethnicity within these locales. This statistically robust insight compels a targeted investigation into the fabric of regional policy frameworks, urging a reformative lens to be applied where the imprints of bias are most pronounced.
 
 
 ## Appendix: All code in this assignment
