@@ -8,6 +8,8 @@ date: "2023-12-11"
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
+My public repository for this assignment can be found [here](https://github.com/lorism7/MY472_Final.git).
+
 ### Introduction
 
 ```{r getting data from the uk police api}
