@@ -385,8 +385,8 @@ relevant and timely.</p>
 <p>During data processing, we ensured consistency and uniformity in the
 datasets. This involved standardizing the data structure across
 different records, removing missing data, and merging the datasets to
-form a single, cohesive database. Key variables included age, gender,
-officer-defined ethnicity, and location.</p>
+form a single, cohesive database. Key variables included geographic
+coordinates and officer-defined ethnicity.</p>
 <p>Another critical aspect of our analysis involved the creation of a
 new variable to identify false stop and searches. This was defined as
 instances where the outcome of a stop and search was not linked to the
@@ -400,13 +400,13 @@ analysis.</p>
 <div id="additional-source" class="section level4">
 <h4>Additional Source</h4>
 <p>To handle and clean the demographic data obtained from the UK Office
-for National Statistics, a methodical approach was applied. The cleaned
-data was then enriched by calculating the total percentage of non-white
-ethnic groups in each area. Finally, we merged with a shapefile, titled
-“Local Authority Districts (May 2021) UK BGC and containing geographic
-boundaries of UK local authority districts as of May 2021, which offered
-a precise and contextually relevant geographical framework for the
-study.</p>
+for National Statistics, a methodical approach of filtering was applied.
+The data was then enriched by calculating the total percentage of
+non-white ethnic groups in each area (summing the percentages of these
+groups row-wise). Finally, we merged with a shapefile, titled “Local
+Authority Districts” and containing geographic boundaries of UK local
+authority districts as of May 2021, which offered a precise and
+contextually relevant geographical framework for the study.</p>
 </div>
 </div>
 <div id="analysis" class="section level3">
@@ -448,8 +448,8 @@ influencing police interactions. The peaks and troughs for each ethnic
 line warrant a closer examination of local policing policies to
 understand the underlying causes of these disparities.</p>
 </div>
-<div id="results-of-the-regression-analysis-rows-1-6" class="section level5">
-<h5>Results of the Regression Analysis (rows 1-6)</h5>
+<div id="table-1-results-of-the-regression-analysis-rows-1-6" class="section level5">
+<h5>Table 1: Results of the Regression Analysis (rows 1-6)</h5>
 <pre><code>## # A tibble: 6 × 5
 ##   term                estimate std.error statistic   p.value
 ##   &lt;chr&gt;                  &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;
@@ -490,6 +490,7 @@ library(httr)
 library(jsonlite)
 library(lubridate)
 
+# The list of police forces to query data for
 # forces &lt;- c(&quot;avon-and-somerset&quot;, &quot;bedfordshire&quot;, &quot;btp&quot;, &quot;cambridgeshire&quot;, &quot;cheshire&quot;, 
 #            &quot;city-of-london&quot;, &quot;cleveland&quot;, &quot;cumbria&quot;, &quot;derbyshire&quot;, &quot;devon-and-cornwall&quot;, 
 #            &quot;dorset&quot;, &quot;durham&quot;, &quot;dyfed-powys&quot;, &quot;essex&quot;, &quot;gloucestershire&quot;, &quot;gmp&quot;, &quot;gwent&quot;, 
@@ -500,6 +501,7 @@ library(lubridate)
 #            &quot;sussex&quot;, &quot;thames-valley&quot;, &quot;warwickshire&quot;, &quot;west-mercia&quot;, &quot;west-midlands&quot;, 
 #            &quot;west-yorkshire&quot;, &quot;wiltshire&quot;)
 
+# Sequence of dates for which to query data
 # date_seq &lt;- c(&quot;2021-01&quot;, &quot;2021-02&quot;, &quot;2021-03&quot;, &quot;2021-04&quot;, &quot;2021-05&quot;,
 #                &quot;2021-06&quot;, &quot;2021-07&quot;, &quot;2021-08&quot;, &quot;2021-09&quot;, &quot;2021-10&quot;, &quot;2021-11&quot;, &quot;2021-12&quot;)
 
@@ -510,11 +512,14 @@ library(lubridate)
                #      &quot;location.longitude&quot;, &quot;location.street.id&quot;, &quot;location.street.name&quot;, &quot;force&quot;)
 
 
+# Initialize an empty list to store the combined data
 #all_data &lt;- list()
 
+# Loop over each police force
 #for (force in forces) {
 #    force_data &lt;- list()
 
+# Loop over each date
 #    for (date in date_seq) {
 #        url &lt;- paste0(&quot;https://data.police.uk/api/stops-force?force=&quot;, force, &quot;&amp;date=&quot;, date)
 #        response &lt;- GET(url)
@@ -540,7 +545,8 @@ library(lubridate)
 #        }
 #    }
 
-#     Combine data frames for this force
+
+#     #Combine data frames for this force
 #    if (length(force_data) &gt; 0) {
 #        all_data[[force]] &lt;- do.call(rbind, force_data)
 #    }
@@ -563,6 +569,8 @@ library(lubridate)
 # Read the data from the saved file
 combined_data &lt;- read.csv(&quot;police_stops_data.csv&quot;)
 
+# ETHNIC COMPOSITION MAP
+
 # Load necessary libraries
 library(sf)
 library(dplyr)
@@ -571,17 +579,15 @@ library(readr)
 library(viridis)
 
 
-# Read the shapefile
+# Read the shapefile for Local Authority Districts in the UK
 lad_shapefile &lt;- st_read(&quot;Local_Authority_Districts_(May_2021)_UK_BGC/LAD_MAY_2021_UK_BGC.shp&quot;, quiet = TRUE)
 
 # Read the CSV data
 data &lt;- read_csv2(&quot;ethnicity-composition-across-uk.csv&quot;)
 
 
-# sum up all non-white ethnicity percentages.
-library(dplyr)
-
-
+# Filter and clean the data
+# Remove rows with &quot;-&quot; in ethnicity columns and convert percentages to numeric
 clean_data &lt;- data %&gt;% 
   filter(`Asian, Asian British or Asian Welsh: Bangladesh` != &quot;-&quot;, 
                            `Asian, Asian British or Asian Welsh: Chinese` != &quot;-&quot;,
@@ -598,6 +604,7 @@ clean_data &lt;- data %&gt;%
                            `Other ethnic group: Arab` != &quot;-&quot;,
                            `Other ethnic group: Any other ethnic group` != &quot;-&quot;)
 
+# Convert percentages to numeric
 data &lt;- clean_data %&gt;%
   mutate(
     `Asian, Asian British or Asian Welsh: Bangladesh` = as.numeric(gsub(&quot;,&quot;, &quot;.&quot;, `Asian, Asian British or Asian Welsh: Bangladesh`)),
@@ -616,7 +623,7 @@ data &lt;- clean_data %&gt;%
     `Other ethnic group: Any other ethnic group` = as.numeric(gsub(&quot;,&quot;, &quot;.&quot;, `Other ethnic group: Any other ethnic group`))
   )
 
-
+# Calculate the total percentage of non-white ethnicities for each row
 data &lt;- data %&gt;%
   rowwise() %&gt;%
   mutate(PercentNonWhite = `Asian, Asian British or Asian Welsh: Bangladesh` +
@@ -641,8 +648,8 @@ data &lt;- data %&gt;%
 # Merge the shapefile and CSV data
 map_data &lt;- left_join(lad_shapefile, data, by = c(&quot;LAD21CD&quot; = &quot;Area code&quot;))
 
-# Assuming your merged shapefile and data is in &#39;uk_data&#39;
-map1 &lt;- ggplot(data = map_data) +
+# Create a map visualization of the percentage of non-white ethnicities
+ethnic_composition_map &lt;- ggplot(data = map_data) +
   geom_sf(aes(fill = PercentNonWhite), color = NA) +  # No border color
   scale_fill_viridis_c(
     option = &quot;C&quot;,  # Viridis color option
@@ -662,26 +669,33 @@ map1 &lt;- ggplot(data = map_data) +
     plot.subtitle = element_text(size = 12)  # Subtitle style
   )
 
+# STOP AND SERACHES DISTRIBUTION MAP
+
+# Load necessary libraries
 library(sf)
 library(dplyr)
 library(ggplot2)
 
-# Assuming the shapefiles are in the specified directory
+# Read the shapefile data for administrative countries
 uk_shape &lt;- st_read(&#39;ne_10m_admin_0_countries/ne_10m_admin_0_countries.shp&#39;, quiet = TRUE)
 
 # Filter for the United Kingdom
 uk &lt;- uk_shape %&gt;% 
   filter(ADMIN == &quot;United Kingdom&quot;)
 
+# Convert latitude and longitude columns in combined_data to numeric values
+# This is necessary for creating spatial data from these coordinates
 combined_data$location.latitude &lt;- as.numeric(as.character(combined_data$location.latitude))
 combined_data$location.longitude &lt;- as.numeric(as.character(combined_data$location.longitude))
 
-# Create a simple feature object from your data
+# Convert the combined_data dataframe into a simple feature object for spatial analysis
+# Coordinates are specified, and the coordinate reference system (CRS) is set to match the UK shapefile
 stops_sf &lt;- st_as_sf(combined_data, coords = c(&quot;location.longitude&quot;, &quot;location.latitude&quot;), 
                      crs = st_crs(uk), agr = &quot;constant&quot;)
 
 
-map2 &lt;- ggplot() +
+# Create a map visualization using ggplot2
+stop_and_search_map &lt;- ggplot() +
   geom_sf(data = uk) +  # Plot the UK map
   geom_sf(data = stops_sf, color = &#39;red&#39;, size = 0.6, alpha = 0.7) +  # Plot the stop and search data
   theme_minimal() +
@@ -692,10 +706,12 @@ map2 &lt;- ggplot() +
     plot.title = element_text(size = 14, face = &quot;bold&quot;) # Title style
   )
 
+# COMBINING THE TWO MAPS IN ONE SINGLE VISUALISATION
+
 library(ggplot2)
 
 # Modify map1 to remove axes
-map1 &lt;- map1 + 
+ethnic_composition_map &lt;- ethnic_composition_map + 
   coord_sf() +  # Add coordinate system for spatial data+ 
   theme(
     panel.grid.major = element_blank(), 
@@ -712,7 +728,7 @@ map1 &lt;- map1 +
 
 
 # Modify map2 to remove axes
-map2 &lt;- map2 + 
+stop_and_search_map &lt;- stop_and_search_map + 
   coord_sf() +  # Add coordinate system for spatial data+ 
   theme(
     panel.grid.major = element_blank(), 
@@ -724,22 +740,22 @@ map2 &lt;- map2 +
   )
 
 # Adjust margins of the maps
-map1 &lt;- map1 + theme(plot.margin = margin(1, 1, 1, 1, &quot;cm&quot;))
-map2 &lt;- map2 + theme(plot.margin = margin(1, 1, 1, 1, &quot;cm&quot;))
+ethnic_composition_map &lt;- ethnic_composition_map + theme(plot.margin = margin(1, 1, 1, 1, &quot;cm&quot;))
+stop_and_search_map &lt;- stop_and_search_map + theme(plot.margin = margin(1, 1, 1, 1, &quot;cm&quot;))
 
 # Combine the plots with patchwork
 library(patchwork)
-combined_map_layout &lt;- map1 + map2 +
+combined_map_layout &lt;- ethnic_composition_map + stop_and_search_map +
   plot_layout(ncol = 2)
 
 # Print the combined plot
 print(combined_map_layout)
-# Load necessary libraries
+# BAR CHART
+
+# Load necessary library
 library(tidyverse)
 
-# Assuming your data is loaded into a dataframe named &#39;police_stops_data&#39;
-
-# Read the CSV file (adjust the path as needed)
+# Read the CSV file
 police_stops_data &lt;- read.csv(&#39;police_stops_data.csv&#39;)
 
 # Creating a new variable for false stop and searches
@@ -774,12 +790,12 @@ ggplot(ethnicity_summary, aes(x = officer_defined_ethnicity, y = proportion_fals
     y = &#39;Proportion of False Searches&#39;
   )
 
+# LINE GRAPH WITH EACH POLICE FORCE
+
 # Load necessary libraries
 library(tidyverse)
 
-# Assuming your data is loaded into a dataframe named &#39;police_stops_data&#39;
-
-# Read the CSV file (adjust the path as needed)
+# Read the CSV file
 police_stops_data &lt;- read.csv(&#39;police_stops_data.csv&#39;)
 
 # Creating a new variable for false stop and searches
@@ -795,6 +811,7 @@ regional_ethnicity_summary &lt;- police_stops_data %&gt;%
   ) %&gt;%
   ungroup()
 
+# Create and customize the line plot
 ggplot(regional_ethnicity_summary, aes(x = force, y = proportion_false_searches, color = officer_defined_ethnicity, group = officer_defined_ethnicity)) +
   geom_line() +
   geom_point() +
@@ -807,6 +824,8 @@ ggplot(regional_ethnicity_summary, aes(x = force, y = proportion_false_searches,
     y = &#39;Proportion of False Searches&#39;,
     color = &#39;Ethnicity&#39;
   )
+
+# REGRESSION ANALYSIS
 
 # Load necessary libraries
 library(dplyr)

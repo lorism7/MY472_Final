@@ -22,7 +22,7 @@ We gathered 2021 stop and search data from the UK Police API, by police force, f
 
 The year 2021 was specifically selected to balance the depth of data with practicality. It offers a recent snapshot, reflecting contemporary policing practices and societal contexts, making our analysis both relevant and timely.
 
-During data processing, we ensured consistency and uniformity in the datasets. This involved standardizing the data structure across different records, removing missing data, and merging the datasets to form a single, cohesive database. Key variables included age, gender, officer-defined ethnicity, and location.
+During data processing, we ensured consistency and uniformity in the datasets. This involved standardizing the data structure across different records, removing missing data, and merging the datasets to form a single, cohesive database. Key variables included geographic coordinates and officer-defined ethnicity.
 
 Another critical aspect of our analysis involved the creation of a new variable to identify false stop and searches. This was defined as instances where the outcome of a stop and search was not linked to the object of the search (FALSE). By calculating the proportion of false stop and searches for each ethnicity, we could gain insights into potential biases in policing practices.
 
@@ -30,7 +30,7 @@ For efficiency and reproducibility, we saved the processed data as a CSV file. T
 
 #### Additional Source
 
-To handle and clean the demographic data obtained from the UK Office for National Statistics, a methodical approach was applied. The cleaned data was then enriched by calculating the total percentage of non-white ethnic groups in each area. Finally, we merged with a shapefile, titled "Local Authority Districts (May 2021) UK BGC and containing geographic boundaries of UK local authority districts as of May 2021, which offered a precise and contextually relevant geographical framework for the study.
+To handle and clean the demographic data obtained from the UK Office for National Statistics, a methodical approach of filtering was applied. The data was then enriched by calculating the total percentage of non-white ethnic groups in each area (summing the percentages of these groups row-wise). Finally, we merged with a shapefile, titled "Local Authority Districts” and containing geographic boundaries of UK local authority districts as of May 2021, which offered a precise and contextually relevant geographical framework for the study.
 
 
 ```{r getting data from the uk police api}
@@ -41,6 +41,7 @@ library(httr)
 library(jsonlite)
 library(lubridate)
 
+# The list of police forces to query data for
 # forces <- c("avon-and-somerset", "bedfordshire", "btp", "cambridgeshire", "cheshire", 
 #            "city-of-london", "cleveland", "cumbria", "derbyshire", "devon-and-cornwall", 
 #            "dorset", "durham", "dyfed-powys", "essex", "gloucestershire", "gmp", "gwent", 
@@ -51,6 +52,7 @@ library(lubridate)
 #            "sussex", "thames-valley", "warwickshire", "west-mercia", "west-midlands", 
 #            "west-yorkshire", "wiltshire")
 
+# Sequence of dates for which to query data
 # date_seq <- c("2021-01", "2021-02", "2021-03", "2021-04", "2021-05",
 #                "2021-06", "2021-07", "2021-08", "2021-09", "2021-10", "2021-11", "2021-12")
 
@@ -61,11 +63,14 @@ library(lubridate)
                #      "location.longitude", "location.street.id", "location.street.name", "force")
 
 
+# Initialize an empty list to store the combined data
 #all_data <- list()
 
+# Loop over each police force
 #for (force in forces) {
 #    force_data <- list()
 
+# Loop over each date
 #    for (date in date_seq) {
 #        url <- paste0("https://data.police.uk/api/stops-force?force=", force, "&date=", date)
 #        response <- GET(url)
@@ -91,7 +96,8 @@ library(lubridate)
 #        }
 #    }
 
-#     Combine data frames for this force
+
+#     #Combine data frames for this force
 #    if (length(force_data) > 0) {
 #        all_data[[force]] <- do.call(rbind, force_data)
 #    }
@@ -116,7 +122,9 @@ combined_data <- read.csv("police_stops_data.csv")
 
 ```
 
-```{r percentage of non-white}
+```{r ethnic composition map}
+# ETHNIC COMPOSITION MAP
+
 # Load necessary libraries
 library(sf)
 library(dplyr)
@@ -125,17 +133,15 @@ library(readr)
 library(viridis)
 
 
-# Read the shapefile
+# Read the shapefile for Local Authority Districts in the UK
 lad_shapefile <- st_read("Local_Authority_Districts_(May_2021)_UK_BGC/LAD_MAY_2021_UK_BGC.shp", quiet = TRUE)
 
 # Read the CSV data
 data <- read_csv2("ethnicity-composition-across-uk.csv")
 
 
-# sum up all non-white ethnicity percentages.
-library(dplyr)
-
-
+# Filter and clean the data
+# Remove rows with "-" in ethnicity columns and convert percentages to numeric
 clean_data <- data %>% 
   filter(`Asian, Asian British or Asian Welsh: Bangladesh` != "-", 
                            `Asian, Asian British or Asian Welsh: Chinese` != "-",
@@ -152,6 +158,7 @@ clean_data <- data %>%
                            `Other ethnic group: Arab` != "-",
                            `Other ethnic group: Any other ethnic group` != "-")
 
+# Convert percentages to numeric
 data <- clean_data %>%
   mutate(
     `Asian, Asian British or Asian Welsh: Bangladesh` = as.numeric(gsub(",", ".", `Asian, Asian British or Asian Welsh: Bangladesh`)),
@@ -170,7 +177,7 @@ data <- clean_data %>%
     `Other ethnic group: Any other ethnic group` = as.numeric(gsub(",", ".", `Other ethnic group: Any other ethnic group`))
   )
 
-
+# Calculate the total percentage of non-white ethnicities for each row
 data <- data %>%
   rowwise() %>%
   mutate(PercentNonWhite = `Asian, Asian British or Asian Welsh: Bangladesh` +
@@ -195,8 +202,8 @@ data <- data %>%
 # Merge the shapefile and CSV data
 map_data <- left_join(lad_shapefile, data, by = c("LAD21CD" = "Area code"))
 
-# Assuming your merged shapefile and data is in 'uk_data'
-map1 <- ggplot(data = map_data) +
+# Create a map visualization of the percentage of non-white ethnicities
+ethnic_composition_map <- ggplot(data = map_data) +
   geom_sf(aes(fill = PercentNonWhite), color = NA) +  # No border color
   scale_fill_viridis_c(
     option = "C",  # Viridis color option
@@ -220,26 +227,33 @@ map1 <- ggplot(data = map_data) +
 
 
 ```{r stop-and-search incidents distribution}
+# STOP AND SERACHES DISTRIBUTION MAP
+
+# Load necessary libraries
 library(sf)
 library(dplyr)
 library(ggplot2)
 
-# Assuming the shapefiles are in the specified directory
+# Read the shapefile data for administrative countries
 uk_shape <- st_read('ne_10m_admin_0_countries/ne_10m_admin_0_countries.shp', quiet = TRUE)
 
 # Filter for the United Kingdom
 uk <- uk_shape %>% 
   filter(ADMIN == "United Kingdom")
 
+# Convert latitude and longitude columns in combined_data to numeric values
+# This is necessary for creating spatial data from these coordinates
 combined_data$location.latitude <- as.numeric(as.character(combined_data$location.latitude))
 combined_data$location.longitude <- as.numeric(as.character(combined_data$location.longitude))
 
-# Create a simple feature object from your data
+# Convert the combined_data dataframe into a simple feature object for spatial analysis
+# Coordinates are specified, and the coordinate reference system (CRS) is set to match the UK shapefile
 stops_sf <- st_as_sf(combined_data, coords = c("location.longitude", "location.latitude"), 
                      crs = st_crs(uk), agr = "constant")
 
 
-map2 <- ggplot() +
+# Create a map visualization using ggplot2
+stop_and_search_map <- ggplot() +
   geom_sf(data = uk) +  # Plot the UK map
   geom_sf(data = stops_sf, color = 'red', size = 0.6, alpha = 0.7) +  # Plot the stop and search data
   theme_minimal() +
@@ -255,10 +269,12 @@ map2 <- ggplot() +
 
 ##### Figure 1: Ethnic Demographics and Police Stop-and-Searches in the UK
 ```{r map together in a single visualisation}
+# COMBINING THE TWO MAPS IN ONE SINGLE VISUALISATION
+
 library(ggplot2)
 
 # Modify map1 to remove axes
-map1 <- map1 + 
+ethnic_composition_map <- ethnic_composition_map + 
   coord_sf() +  # Add coordinate system for spatial data+ 
   theme(
     panel.grid.major = element_blank(), 
@@ -275,7 +291,7 @@ map1 <- map1 +
 
 
 # Modify map2 to remove axes
-map2 <- map2 + 
+stop_and_search_map <- stop_and_search_map + 
   coord_sf() +  # Add coordinate system for spatial data+ 
   theme(
     panel.grid.major = element_blank(), 
@@ -287,12 +303,12 @@ map2 <- map2 +
   )
 
 # Adjust margins of the maps
-map1 <- map1 + theme(plot.margin = margin(1, 1, 1, 1, "cm"))
-map2 <- map2 + theme(plot.margin = margin(1, 1, 1, 1, "cm"))
+ethnic_composition_map <- ethnic_composition_map + theme(plot.margin = margin(1, 1, 1, 1, "cm"))
+stop_and_search_map <- stop_and_search_map + theme(plot.margin = margin(1, 1, 1, 1, "cm"))
 
 # Combine the plots with patchwork
 library(patchwork)
-combined_map_layout <- map1 + map2 +
+combined_map_layout <- ethnic_composition_map + stop_and_search_map +
   plot_layout(ncol = 2)
 
 # Print the combined plot
@@ -304,12 +320,12 @@ Figure 1 contrasts two maps of the UK, one depicting the density of non-white et
 
 ##### Figure 2
 ```{r bar chart}
-# Load necessary libraries
+# BAR CHART
+
+# Load necessary library
 library(tidyverse)
 
-# Assuming your data is loaded into a dataframe named 'police_stops_data'
-
-# Read the CSV file (adjust the path as needed)
+# Read the CSV file
 police_stops_data <- read.csv('police_stops_data.csv')
 
 # Creating a new variable for false stop and searches
@@ -351,12 +367,12 @@ Figure 2 presents a clear visual representation of the proportion of false stops
 
 ##### Figure 3
 ```{r adding police force to the analysis}
+# LINE GRAPH WITH EACH POLICE FORCE
+
 # Load necessary libraries
 library(tidyverse)
 
-# Assuming your data is loaded into a dataframe named 'police_stops_data'
-
-# Read the CSV file (adjust the path as needed)
+# Read the CSV file
 police_stops_data <- read.csv('police_stops_data.csv')
 
 # Creating a new variable for false stop and searches
@@ -372,6 +388,7 @@ regional_ethnicity_summary <- police_stops_data %>%
   ) %>%
   ungroup()
 
+# Create and customize the line plot
 ggplot(regional_ethnicity_summary, aes(x = force, y = proportion_false_searches, color = officer_defined_ethnicity, group = officer_defined_ethnicity)) +
   geom_line() +
   geom_point() +
@@ -390,8 +407,10 @@ ggplot(regional_ethnicity_summary, aes(x = force, y = proportion_false_searches,
 Figure 3 depicts the inconsistency of false stop and searches across regions for different ethnic groups, suggesting that the application of stop and search is not uniform. The fluctuation might reflect regional policing strategies, community relations, or social-economic factors influencing police interactions. The peaks and troughs for each ethnic line warrant a closer examination of local policing policies to understand the underlying causes of these disparities.
 
 
-##### Results of the Regression Analysis (rows 1-6)
+##### Table 1: Results of the Regression Analysis (rows 1-6)
 ```{r regression}
+# REGRESSION ANALYSIS
+
 # Load necessary libraries
 library(dplyr)
 
