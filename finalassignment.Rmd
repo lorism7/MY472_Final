@@ -1,16 +1,23 @@
 ---
-title: "Assignment4"
+title: "MY472 Final Assignment"
 output: html_document
-date: "2023-12-11"
+date: "2024-01-10"
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 ```
 
 My public repository for this assignment can be found [here](https://github.com/lorism7/MY472_Final.git).
 
 ### Introduction
+
+This analysis seeks to identify potential biases in the UK's police stop and search practices, particularly regarding officer-perceived ethnicity. Our methodology involves data sourcing and preprocessing from the UK Police database and the Office for National Statistics, focusing on demographic and geographic aspects. We place significant emphasis on calculating and analyzing the proportion of false stop and searches by ethnicity and region, as this metric could reflect the accuracy and justification of police actions, indicating potential discriminatory biases if certain ethnic groups are disproportionately subject to unjustified searches. Through both visualization and statistical analysis, our approach aims to provide a comprehensive understanding of these law enforcement practices and their implications for fairness and public trust.
+
+### Data
+
+#### UK Police Data API
+
 
 ```{r getting data from the uk police api}
 library(httr)
@@ -102,7 +109,7 @@ library(viridis)
 
 
 # Read the shapefile
-lad_shapefile <- st_read("Local_Authority_Districts_(May_2021)_UK_BGC/LAD_MAY_2021_UK_BGC.shp")
+lad_shapefile <- st_read("Local_Authority_Districts_(May_2021)_UK_BGC/LAD_MAY_2021_UK_BGC.shp", quiet = TRUE)
 
 # Read the CSV data
 data <- read_csv2("ethnicity-composition-across-uk.csv")
@@ -201,7 +208,7 @@ library(dplyr)
 library(ggplot2)
 
 # Assuming the shapefiles are in the specified directory
-uk_shape <- st_read('ne_10m_admin_0_countries/ne_10m_admin_0_countries.shp')
+uk_shape <- st_read('ne_10m_admin_0_countries/ne_10m_admin_0_countries.shp', quiet = TRUE)
 
 # Filter for the United Kingdom
 uk <- uk_shape %>% 
@@ -411,6 +418,10 @@ The results are meaningful as they indicate significant differences in the likel
 However, interpretation should be cautious. Logistic regression coefficients can be influenced by unmeasured confounding variables and the choice of reference categories.
 The model indicates that both region (force) and ethnicity significantly affect the likelihood of a false stop and search, but it's important to consider the broader context, including potential biases in policing practices and demographic differences across regions.
 To further understand the implications of these findings, you might want to delve deeper into specific significant predictors or consult with a domain expert.
+
+
+
+
 
 ## Appendix: All code in this assignment
 
