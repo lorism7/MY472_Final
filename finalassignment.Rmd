@@ -12,44 +12,44 @@ My public repository for this assignment can be found [here](https://github.com/
 
 ### Introduction
 
-This analysis seeks to identify potential biases in the UK's police stop and search practices, particularly regarding officer-perceived ethnicity. Our methodology involves data sourcing and preprocessing from the UK Police database and the Office for National Statistics, focusing on demographic and geographic aspects. We place significant emphasis on calculating and analyzing the proportion of false stop and searches by ethnicity and region, as this metric could reflect the accuracy and justification of police actions, indicating potential discriminatory biases if certain ethnic groups are disproportionately subject to unjustified searches. Through both visualization and statistical analysis, our approach aims to provide a comprehensive understanding of these law enforcement practices and their implications for fairness and public trust.
+This analysis examines potential biases in the UK's police stop and search practices, focusing on officer-perceived ethnicity. We sourced and preprocessed data from the UK Police database and the Office for National Statistics, concentrating on demographic and geographic factors. Our key metric is the proportion of false stop and searches by ethnicity and region, a potential indicator of biased policing. Our methodology involves visualization and statistical analysis to understand these law enforcement practices and their implications for fairness and public trust.
 
 ### Data
 
 #### UK Police Data API
 
-For the study's primary data source, we meticulously gathered stop and search data from the UK Police API, tailored by individual police forces and confined to the year 2021. This approach was chosen for its precision in capturing localized policing patterns and ensuring a comprehensive view across different regions. Each police force's data was collected monthly, ensuring granularity in the time sequence and allowing for the detection of temporal trends.
+We gathered 2021 stop and search data from the UK Police API, by police force, for detailed regional insights. This approach was chosen for its precision in capturing localized policing patterns and ensuring a comprehensive view across different regions. Each police force's data was collected monthly, ensuring granularity in the time sequence and allowing for the detection of temporal trends.
 
 The year 2021 was specifically selected to balance the depth of data with practicality. It offers a recent snapshot, reflecting contemporary policing practices and societal contexts, making our analysis both relevant and timely.
 
-During data processing, we ensured consistency and uniformity in the datasets. This involved standardizing the data structure across different records, removing missing data, and merging the datasets to form a single, cohesive database. The data included key variables such as age, gender, officer-defined ethnicity, and geographic coordinates, providing a rich basis for our analysis.
+During data processing, we ensured consistency and uniformity in the datasets. This involved standardizing the data structure across different records, removing missing data, and merging the datasets to form a single, cohesive database. Key variables included age, gender, officer-defined ethnicity, and location.
 
 Another critical aspect of our analysis involved the creation of a new variable to identify false stop and searches. This was defined as instances where the outcome of a stop and search was not linked to the object of the search (FALSE). By calculating the proportion of false stop and searches for each ethnicity, we could gain insights into potential biases in policing practices.
 
-Due to the extensive size of the data and to optimize the run-time of our analysis, we saved the processed data as a CSV file. This step not only streamlined our workflow but also ensured that our analysis was reproducible and efficient. For spatial analysis,  we utilized the "ne_10m_admin_0_countries" shapefile as our geographic data source.
+For efficiency and reproducibility, we saved the processed data as a CSV file. The "ne_10m_admin_0_countries" shapefile was used for spatial analysis.
 
 #### Additional Source
 
-To handle and clean the demographic data obtained from the UK Office for National Statistics, a methodical approach was applied. After being filtered and transformed, the cleaned data was  enriched by calculating the total percentage of non-white ethnic groups in each area. This was achieved by summing the percentages of all non-white ethnic groups row-wise, providing a comprehensive measure of ethnic diversity across different regions.
-
-Finally, this processed demographic data was merged with a shapefile, enabling spatial analysis and visualization of ethnic compositions in correlation with police stop and search data. The shapefile, titled "Local Authority Districts (May 2021) UK BGC and containing geographic boundaries of UK local authority districts as of May 2021, offered a precise and contextually relevant geographical framework for the study.
-
+To handle and clean the demographic data obtained from the UK Office for National Statistics, a methodical approach was applied. The cleaned data was then enriched by calculating the total percentage of non-white ethnic groups in each area. Finally, we merged with a shapefile, titled "Local Authority Districts (May 2021) UK BGC and containing geographic boundaries of UK local authority districts as of May 2021, which offered a precise and contextually relevant geographical framework for the study.
 
 
 ```{r getting data from the uk police api}
+# THIS CHUNK OF CODE PERFORMS DATA RETRIVAL FROM THE UK POLICE API. IT HAS BEEN RUN ONCE AND SAVED IN THE "police_stops_data.csv" TO REDUCE RUNTIME AND INCREASE EFFICIENCY
+
+# loading the necessary libraries
 library(httr)
 library(jsonlite)
 library(lubridate)
 
 # forces <- c("avon-and-somerset", "bedfordshire", "btp", "cambridgeshire", "cheshire", 
 #            "city-of-london", "cleveland", "cumbria", "derbyshire", "devon-and-cornwall", 
- #           "dorset", "durham", "dyfed-powys", "essex", "gloucestershire", "gmp", "gwent", 
-  #          "hampshire", "hertfordshire", "humberside", "kent", "lancashire", "leicestershire", 
-   #         "lincolnshire", "merseyside", "metropolitan", "norfolk", "north-wales", 
-    #        "north-yorkshire", "northamptonshire", "northumbria", "nottinghamshire", "psni", 
-     #       "south-wales", "south-yorkshire", "staffordshire", "suffolk", "surrey", 
-     #       "sussex", "thames-valley", "warwickshire", "west-mercia", "west-midlands", 
-      #      "west-yorkshire", "wiltshire")
+#            "dorset", "durham", "dyfed-powys", "essex", "gloucestershire", "gmp", "gwent", 
+#            "hampshire", "hertfordshire", "humberside", "kent", "lancashire", "leicestershire", 
+#            "lincolnshire", "merseyside", "metropolitan", "norfolk", "north-wales", 
+#            "north-yorkshire", "northamptonshire", "northumbria", "nottinghamshire", "psni", 
+#            "south-wales", "south-yorkshire", "staffordshire", "suffolk", "surrey", 
+#            "sussex", "thames-valley", "warwickshire", "west-mercia", "west-midlands", 
+#            "west-yorkshire", "wiltshire")
 
 # date_seq <- c("2021-01", "2021-02", "2021-03", "2021-04", "2021-05",
 #                "2021-06", "2021-07", "2021-08", "2021-09", "2021-10", "2021-11", "2021-12")
@@ -64,37 +64,37 @@ library(lubridate)
 #all_data <- list()
 
 #for (force in forces) {
-  #  force_data <- list()
+#    force_data <- list()
 
-    #for (date in date_seq) {
-        #url <- paste0("https://data.police.uk/api/stops-force?force=", force, "&date=", date)
-        #response <- GET(url)
-       # if (status_code(response) == 200) {
-     #       data <- fromJSON(content(response, "text", encoding = "UTF-8"), flatten = TRUE)
-       #     if (is.data.frame(data) && nrow(data) > 0) {
-      #          data$force <- force  # Add the force name here
+#    for (date in date_seq) {
+#        url <- paste0("https://data.police.uk/api/stops-force?force=", force, "&date=", date)
+#        response <- GET(url)
+#        if (status_code(response) == 200) {
+#            data <- fromJSON(content(response, "text", encoding = "UTF-8"), flatten = TRUE)
+#            if (is.data.frame(data) && nrow(data) > 0) {
+#                data$force <- force  # Add the force name here
 
-                # Standardize columns
-        #        for (col in columns_to_keep) {
-         #           if (!col %in% names(data)) {
-          #              data[[col]] <- NA  # Add missing columns as NA
-           #         }
-            #    }
-             #   data <- data[, columns_to_keep]  # Keep only the desired columns
+#                 Standardize columns
+#                for (col in columns_to_keep) {
+#                    if (!col %in% names(data)) {
+#                        data[[col]] <- NA  # Add missing columns as NA
+#                    }
+#                }
+#                data <- data[, columns_to_keep]  # Keep only the desired columns
 
-              #  force_data[[date]] <- data
-          #  } else {
-           #     warning("No data or incorrect format for ", force, " for date ", date)
-            #}
-      #  } else {
-     #       warning("Failed to retrieve data for ", force, " for date ", date)
-      #  }
-  #  }
+#                force_data[[date]] <- data
+#            } else {
+#                warning("No data or incorrect format for ", force, " for date ", date)
+#            }
+#        } else {
+#            warning("Failed to retrieve data for ", force, " for date ", date)
+#        }
+#    }
 
-    # Combine data frames for this force
-   # if (length(force_data) > 0) {
+#     Combine data frames for this force
+#    if (length(force_data) > 0) {
 #        all_data[[force]] <- do.call(rbind, force_data)
- #   }
+#    }
 #}
 
 # Combine all the data into one data frame
@@ -299,7 +299,7 @@ combined_map_layout <- map1 + map2 +
 print(combined_map_layout)
 ```
 
-Figure 1 contrasts two maps of the UK, one depicting the density of non-white ethnic groups with London as the focal point, and the other indicating stop-and-search incidents, similarly clustered around London. This visual pairing hints at a potential link between ethnic composition and the frequency of police interventions, with both phenomena most pronounced in the capital. However, also taking into account the missing data (grey areas), we would need deeper examination to discern any underlying causality, as the maps alone merely suggest a spatial alignment without establishing a direct connection.
+Figure 1 contrasts two maps of the UK, one depicting the density of non-white ethnic groups with London as the focal point, and the other indicating stop-and-search incidents, similarly clustered around London. This visual pairing hints at a potential link between ethnic composition and the frequency of police interventions, with both phenomena most pronounced in the capital. However, also taking into account the missing data (grey areas), we need deeper examination to discern any underlying causality, as the maps alone merely suggest a spatial alignment without establishing a direct connection.
 
 
 ##### Figure 2
@@ -346,7 +346,7 @@ ggplot(ethnicity_summary, aes(x = officer_defined_ethnicity, y = proportion_fals
 
 ```
 
-Figure 2 presents a clear visual representation of the proportion of false stops and searches across different ethnic groups, showing a marked variance that could indicate an ethnic bias in law enforcement practices. Notably, individuals identified as Black and those grouped as 'Other' encounter the highest rates of false stops and searches, significantly more than their Asian counterparts, who experience the lowest. This disparity points toward a troubling trend that may reflect prejudiced assumptions rooted in perceived ethnicity, calling for a critical evaluation of policing tactics to address potential biases.
+Figure 2 presents a clear visual representation of the proportion of false stops and searches across different ethnic groups, showing a marked variance that could indicate an ethnic bias. Notably, individuals identified as Black and those grouped as 'Other' encounter the highest rates of false stops and searches, significantly more than their Asian counterparts, who experience the lowest. This disparity calls for a critical evaluation of policing tactics to address prejudiced assumptions rooted in perceived ethnicity.
 
 
 ##### Figure 3
@@ -428,7 +428,13 @@ head(important_results)
 
 ```
 
-The regression analysis enhances the narrative painted by Figure 3, quantitatively affirming that disparities in stop and search practices are not merely random fluctuations but are instead significantly influenced by regional policing policies and potentially by the intersectional dynamics of ethnicity within these locales. This statistically robust insight compels a targeted investigation into the fabric of regional policy frameworks, urging a reformative lens to be applied where the imprints of bias are most pronounced.
+The regression analysis quantitatively affirms that disparities in stop and search practices are not merely random fluctuations but are instead significantly influenced by regional policing policies and potentially by the intersectional dynamics of ethnicity within these locales. This  compels a targeted investigation into the fabric of regional policy frameworks.
+
+
+### Limitations
+
+Our analysis, while revealing, has limitations. The 2021 data provides a recent snapshot but may not capture longer-term trends. The absence of time-of-day data limits our ability to explore temporal patterns in police behavior. Some forces only record dates, not specific times, resulting in a skewed distribution of incidents around midnight.  Moreover, the complexity of societal factors influencing police actions are not fully captured. Future research could benefit from a multi-dimensional approach, integrating additional variables and longitudinal data to provide a more nuanced understanding of policing biases.
+
 
 
 ## Appendix: All code in this assignment
