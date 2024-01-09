@@ -10,6 +10,10 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 
 My public repository for this assignment can be found [here](https://github.com/lorism7/MY472_Final.git).
 
+### Option 1
+
+“In the United Kingdom, a police officer has powers to stop and search any individual if the officer has ‘reasonable grounds’ to suspect the individual is carrying certain items or, under some other conditions, if a senior police officer has granted approval (see here for details). Are there biases in who experiences stop and search by the police?”
+
 ### Introduction
 
 This analysis examines potential biases in the UK's police stop and search practices, focusing on officer-perceived ethnicity. We sourced and preprocessed data from the UK Police database and the Office for National Statistics, concentrating on demographic and geographic factors. Our key metric is the proportion of false stop and searches by ethnicity and region, a potential indicator of biased policing. Our methodology involves visualization and statistical analysis to understand these law enforcement practices and their implications for fairness and public trust.
